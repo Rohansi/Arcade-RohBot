@@ -18,7 +18,6 @@ namespace Games.RohBot
         }
         
         private Main _game;
-        private WebSocket _socket;
         
         private Text _title;
         private Text _label;
@@ -31,11 +30,16 @@ namespace Games.RohBot
         private string _username;
         private string _password;
         
-        public LoginStage(Main game, WebSocket socket)
+        private WebSocket Socket
+        {
+            get { return _game.Socket; }
+            set { _game.Socket = value; }
+        }
+        
+        public LoginStage(Main game)
             : base(game)
         {
             _game = game;
-            _socket = socket;
             
             var font = Graphics.GetImage("Resources", "font");
             var color = _game.Swatches.White;
@@ -52,7 +56,7 @@ namespace Games.RohBot
             _keyboard.Position = new Vector2i((Graphics.Size.X / 2) - (_keyboard.Width / 2), 16);
             _keyboard.Pressed += KeyboardPressed;
             
-            socket.MessageReceived = message =>
+            Socket.MessageReceived = message =>
             {
                 var obj = (Dictionary<string, object>)Json.Deserialize(message);
                 var type = (string)obj["Type"];
@@ -71,6 +75,8 @@ namespace Games.RohBot
             _keyboardStr = "password";*/
             
             ChangeState(LoginState.EnterUsername);
+            
+            OnUpdate(); // workaround for flicker on the first frame
         }
         
         private void KeyboardPressed(char ch)
@@ -99,7 +105,7 @@ namespace Games.RohBot
                     case LoginState.EnterPassword:
                         _password = _keyboardStr;
                         
-                        _socket.Send(Json.Serialize(new Dictionary<string, object>
+                        Socket.Send(Json.Serialize(new Dictionary<string, object>
                         {
                             { "Type", "auth" },
                             { "Method", "login" },
@@ -192,44 +198,24 @@ namespace Games.RohBot
             }
         }
         
-        protected override void OnRender()
-        {
-            base.OnRender();
-        }
-        
         protected override void OnEnter()
         {
             Debug.Log("LoginStage entered");
             Graphics.SetClearColor(_game.Swatches.ClearColor);
         }
         
-        protected override void OnLeave()
-        {
-            if (_socket == null)
-                return;
-                
-            _socket.Dispose();
-            _socket = null;
-        }
-        
         private IEnumerator LoginSuccessCoroutine()
         {
             yield return Delay(1);
             
-            var socket = _socket;
-            _socket = null;
-            
-            _game.SetStage(new ChatStage(_game, socket));
+            _game.SetStage(new ChatStage(_game));
         }
 
         private IEnumerator LoginFailedCoroutine()
         {
             yield return Delay(2);
             
-            var socket = _socket;
-            _socket = null;
-            
-            _game.SetStage(new LoginStage(_game, socket));
+            _game.SetStage(new LoginStage(_game));
         }
     }
 }

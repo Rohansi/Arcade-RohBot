@@ -30,6 +30,10 @@ namespace Games.RohBot
         {
             if (_client == null)
                 return;
+                
+            Connected = null;
+            Disconnected = null;
+            MessageReceived = null;
 
             _client.Close();
             _client = null;

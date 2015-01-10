@@ -9,7 +9,6 @@ namespace Games.RohBot
     public class ChatStage : Stage
     {
         private Main _game;
-        private WebSocket _socket;
         
         private VirtualKeyboard _keyboard;
         private string _keyboardStr;
@@ -18,11 +17,16 @@ namespace Games.RohBot
         
         private List<Text> _history;
         
-        public ChatStage(Main game, WebSocket socket)
+        private WebSocket Socket
+        {
+            get { return _game.Socket; }
+            set { _game.Socket = value; }
+        }
+        
+        public ChatStage(Main game)
             : base(game)
         {
             _game = game;
-            _socket = socket;
             
             var font = Graphics.GetImage("Resources", "font");
             var color = _game.Swatches.White;
@@ -48,48 +52,46 @@ namespace Games.RohBot
                 _history.Add(line);
             }
                     
-            _socket.Send(Json.Serialize(new Dictionary<string, object>
+            Socket.Send(Json.Serialize(new Dictionary<string, object>
             {
                 { "Type", "sendMessage" },
                 { "Target", "home" },
                 { "Content", "/join general" }
             }));
             
-            _socket.MessageReceived = message =>
-            {
-                // ignore long messages, we dont need em
-                if (message.Length > 16384)
-                    return;
-                    
-                var obj = (Dictionary<string, object>)Json.Deserialize(message);
-                var type = (string)obj["Type"];
+            Socket.MessageReceived = MessageReceived;
+        }
+        
+        private void MessageReceived(string message)
+        {
+            var obj = (Dictionary<string, object>)Json.Deserialize(message);
+            var type = (string)obj["Type"];
 
-                if (type != "message")
-                    return;
-                    
-                var line = (Dictionary<string, object>)obj["Line"];
-                var chat = (string)line["Chat"];
+            if (type != "message")
+                return;
                 
-                if (chat != "general")
-                    return;
-                    
-                var lineType = (string)line["Type"];
-                var content = WebUtility.HtmlDecode((string)line["Content"]);
+            var line = (Dictionary<string, object>)obj["Line"];
+            var chat = (string)line["Chat"];
+            
+            if (chat != "general")
+                return;
                 
-                if (lineType == "chat")
-                {
-                    var sender = WebUtility.HtmlDecode((string)line["Sender"]);
-                    
-                    if (sender.Length > 6)
-                        sender = sender.Substring(0, 6);
-                    
-                    content = string.Format("{0}: {1}", sender, content);
-                }
+            var lineType = (string)line["Type"];
+            var content = WebUtility.HtmlDecode((string)line["Content"]);
+            
+            if (lineType == "chat")
+            {
+                var sender = WebUtility.HtmlDecode((string)line["Sender"]);
                 
-                content = content.Replace("\r", "").Replace("\n", "");
+                if (sender.Length > 6)
+                    sender = sender.Substring(0, 6);
                 
-                AddLine(content);
-            };
+                content = string.Format("{0}: {1}", sender, content);
+            }
+            
+            content = content.Replace("\r", "").Replace("\n", "");
+            
+            AddLine(content);
         }
         
         private void AddLine(string value)
@@ -129,7 +131,7 @@ namespace Games.RohBot
                 if (string.IsNullOrEmpty(_keyboardStr))
                     return;
                     
-                _socket.Send(Json.Serialize(new Dictionary<string, object>
+                Socket.Send(Json.Serialize(new Dictionary<string, object>
                 {
                     { "Type", "sendMessage" },
                     { "Target", "general" },
@@ -150,26 +152,12 @@ namespace Games.RohBot
             Graphics.SetClearColor(_game.Swatches.ClearColor);
         }
         
-        protected override void OnLeave()
-        {
-            if (_socket == null)
-                return;
-                
-            _socket.Dispose();
-            _socket = null;
-        }
-        
         protected override void OnUpdate()
         {
             base.OnUpdate();
             Dispatcher.RunAll();
             
             _input.Value = _keyboardStr;
-        }
-        
-        protected override void OnRender()
-        {
-            base.OnRender();
         }
     }
 }

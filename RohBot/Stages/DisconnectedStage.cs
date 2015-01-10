@@ -29,6 +29,7 @@ namespace Games.RohBot
         {
             yield return Delay(10.0);
             
+            _game.ResetSocket();
             _game.SetStage(new ConnectStage(_game));
         }
         
@@ -42,11 +43,6 @@ namespace Games.RohBot
         {
             base.OnUpdate();
             Dispatcher.RunAll();
-        }
-        
-        protected override void OnRender()
-        {
-            base.OnRender();
         }
     }
 }

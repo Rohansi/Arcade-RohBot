@@ -8,9 +8,14 @@ namespace Games.RohBot
     public class ConnectStage : Stage
     {
         private Main _game;
-        private WebSocket _socket;
         
         private Text _text;
+        
+        private WebSocket Socket
+        {
+            get { return _game.Socket; }
+            set { _game.Socket = value; }
+        }
         
         public ConnectStage(Main game)
             : base(game)
@@ -23,10 +28,10 @@ namespace Games.RohBot
             _text.Value = "Connecting...";
             _text.Position = (Graphics.Size / 2) - (_text.Size / 2);
             
-            _socket = new WebSocket("fpp.literallybrian.com", 12000);
+            Socket = new WebSocket("fpp.literallybrian.com", 12000);
             
-            _socket.Connected = ConnectedHandler;
-            _socket.Disconnected = exception => ConnectedHandler(false);
+            Socket.Connected = ConnectedHandler;
+            Socket.Disconnected = exception => ConnectedHandler(false);
         }
         
         private void ConnectedHandler(bool success)
@@ -36,8 +41,9 @@ namespace Games.RohBot
             else
                 StartCoroutine(FailedCoroutine);
             
-            _socket.Disconnected = exception =>
+            Socket.Disconnected = exception =>
             {
+                _game.ResetSocket();
                 _game.SetStage(new DisconnectedStage(_game));
             };
         }
@@ -51,10 +57,7 @@ namespace Games.RohBot
             
             yield return Delay(0.5);
             
-            var socket = _socket;
-            _socket = null;
-            
-            _game.SetStage(new LoginStage(_game, socket));
+            _game.SetStage(new LoginStage(_game));
         }
         
         private IEnumerator FailedCoroutine()
@@ -66,6 +69,7 @@ namespace Games.RohBot
             
             yield return Delay(10.0);
             
+            _game.ResetSocket();
             _game.SetStage(new ConnectStage(_game));
         }
         
@@ -75,24 +79,10 @@ namespace Games.RohBot
             Graphics.SetClearColor(_game.Swatches.ClearColor);
         }
         
-        protected override void OnLeave()
-        {
-            if (_socket == null)
-                return;
-                
-            _socket.Dispose();
-            _socket = null;
-        }
-        
         protected override void OnUpdate()
         {
             base.OnUpdate();
             Dispatcher.RunAll();
-        }
-        
-        protected override void OnRender()
-        {
-            base.OnRender();
         }
     }
 }
