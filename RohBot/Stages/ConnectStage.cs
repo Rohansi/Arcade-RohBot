@@ -28,7 +28,7 @@ namespace Games.RohBot
             _text.Value = "Connecting...";
             _text.Position = (Graphics.Size / 2) - (_text.Size / 2);
             
-            Socket = new WebSocket("fpp.literallybrian.com", 12000);
+            Socket = new WebSocket("107.191.98.153", 12000);
             
             Socket.Connected = ConnectedHandler;
             Socket.Disconnected = exception => ConnectedHandler(false);

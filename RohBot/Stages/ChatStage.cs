@@ -67,21 +67,37 @@ namespace Games.RohBot
             var obj = (Dictionary<string, object>)Json.Deserialize(message);
             var type = (string)obj["Type"];
 
-            if (type != "message")
-                return;
-                
-            var line = (Dictionary<string, object>)obj["Line"];
-            var chat = (string)line["Chat"];
-            
-            if (chat != "general")
-                return;
-                
-            var lineType = (string)line["Type"];
-            var content = WebUtility.HtmlDecode((string)line["Content"]);
+            switch (type)
+            {
+                case "message":
+                {
+                    var line = (Dictionary<string, object>)obj["Line"];
+                    var chat = (string)line["Chat"];
+                    
+                    if (chat != "general")
+                        break;
+                    
+                    AddLine(LineObjectToString(line));
+                    break;
+                }
+                    
+                case "sysMessage":
+                {
+                    var content = WebUtility.HtmlDecode((string)obj["Content"]);
+                    AddLine(content);
+                    break;
+                }
+            }
+        }
+        
+        private string LineObjectToString(Dictionary<string, object> obj)
+        {         
+            var lineType = (string)obj["Type"];
+            var content = WebUtility.HtmlDecode((string)obj["Content"]);
             
             if (lineType == "chat")
             {
-                var sender = WebUtility.HtmlDecode((string)line["Sender"]);
+                var sender = WebUtility.HtmlDecode((string)obj["Sender"]);
                 
                 if (sender.Length > 6)
                     sender = sender.Substring(0, 6);
@@ -89,9 +105,7 @@ namespace Games.RohBot
                 content = string.Format("{0}: {1}", sender, content);
             }
             
-            content = content.Replace("\r", "").Replace("\n", "");
-            
-            AddLine(content);
+            return content.Replace("\r", "").Replace("\n", "");
         }
         
         private void AddLine(string value)
